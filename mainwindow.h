@@ -15,26 +15,28 @@ public:
     ~MainWindow();
 
 private slots:
-    void openImage();      // 開啟圖片
-    void processGrayscale(); // 執行影像處理（轉灰階）
-    void saveImage();      // 儲存處理後的圖片
+    void openImage();        // 開啟圖片 (Open Image)
+    void saveImage();        // 儲存圖片 (Save)
+    void processGrayscale(); // 影像處理：轉灰階 (Image Menu)
+    void clearImages();      // 編輯功能：清除畫面 (Edit Menu)
 
 private:
-    void setupUI();        // 初始化介面排版
-    void setupActions();   // 初始化 QAction、Menu 與 Toolbar
-    void updateImageDisplay(); // 更新左右兩個 QLabel 的圖片顯示
+    void setupUI();            // 建立 CentralWidget 與雙畫面排版
+    void setupActions();       // 建立 QAction (含 Icon 與 Shortcut)、Menu 與 Toolbar
+    void updateImageDisplay(); // 等比例更新圖片顯示
 
-    // 介面顯示元件
+    // CentralWidget 內的顯示元件
     QLabel *originalLabel;
     QLabel *processedLabel;
 
-    // 共用動作 (Menu 與 Toolbar 共用)
-    QAction *openAction;
-    QAction *processAction;
-    QAction *saveAction;
-    QAction *exitAction;
+    // QAction 動作定義
+    QAction *openAction;      // Open Image (同時給 File Menu 與 Toolbar 共用)
+    QAction *saveAction;      // Save (綁定 Ctrl+S)
+    QAction *exitAction;      // Exit
+    QAction *grayscaleAction; // Grayscale (隸屬 Image Menu)
+    QAction *clearAction;     // Clear (隸屬 Edit Menu)
 
-    // 影像資料暫存
+    // 影像資料
     QImage originalImage;
     QImage processedImage;
 };

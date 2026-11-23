@@ -12,13 +12,13 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    setWindowTitle("Qt MainWindow 影像處理與對比系統");
+    setWindowTitle("Qt MainWindow 影像處理系統");
     resize(1000, 600);
 
     setupUI();
     setupActions();
 
-    statusBar()->showMessage("就緒：請先透過 File -> Open 或工具列載入圖片");
+    statusBar()->showMessage("就緒：請點擊 Open Image 載入圖片");
 }
 
 MainWindow::~MainWindow()
@@ -27,7 +27,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-    // 建立中央主容器
+    // 【需求：CentralWidget】建立中央主容器並設為 CentralWidget
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
 
@@ -61,87 +61,106 @@ void MainWindow::setupUI()
     rightLayout->addWidget(rightTitle);
     rightLayout->addWidget(processedLabel, 1);
 
-    // 將左右兩側加入水平排版
     mainLayout->addLayout(leftLayout);
     mainLayout->addLayout(rightLayout);
 }
 
 void MainWindow::setupActions()
 {
-    // 1. 建立共用動作 (QAction)
-    openAction = new QAction(style()->standardIcon(QStyle::SP_DialogOpenButton), "Open Image (&O)", this);
+    // 【需求：QAction 套用 icon 和 shortcut】
+    // 1. Open Image (追加項目：將同時掛載至 File Menu 與 Toolbar)
+    openAction = new QAction(style()->standardIcon(QStyle::SP_DialogOpenButton), "Open Image", this);
     openAction->setShortcut(QKeySequence::Open); // Ctrl+O
-    openAction->setStatusTip("從本機選擇並載入影像檔案");
+    openAction->setStatusTip("開啟本機影像檔案 (Ctrl+O)");
 
-    processAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), "執行灰階處理 (&R)", this);
-    processAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R)); // Ctrl+R
-    processAction->setStatusTip("將左側原圖轉換為灰階並顯示於右側");
-    processAction->setEnabled(false); // 【防呆】未載入圖片前停用
+    // 2. Save (追加項目：加入 Ctrl+S 快捷鍵)
+    saveAction = new QAction(style()->standardIcon(QStyle::SP_DialogSaveButton), "Save", this);
+    saveAction->setShortcut(QKeySequence::Save); // Ctrl+S
+    saveAction->setStatusTip("儲存處理後的影像 (Ctrl+S)");
+    saveAction->setEnabled(false); // 尚未處理圖片前先停用
 
-    saveAction = new QAction(style()->standardIcon(QStyle::SP_DialogSaveButton), "Save (&S)", this);
-    saveAction->setShortcut(QKeySequence::Save); // 綁定 Ctrl+S 快捷鍵
-    saveAction->setStatusTip("將右側處理完成的影像匯出存檔 (Ctrl+S)");
-    saveAction->setEnabled(false); // 【防呆】未完成處理前停用
+    // 3. Exit
+    exitAction = new QAction(style()->standardIcon(QStyle::SP_DialogCloseButton), "Exit", this);
+    exitAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Q)); // Ctrl+Q
+    exitAction->setStatusTip("關閉應用程式 (Ctrl+Q)");
 
-    exitAction = new QAction(style()->standardIcon(QStyle::SP_DialogCloseButton), "Exit (&X)", this);
-    exitAction->setShortcut(QKeySequence::Quit);
+    // 4. Image Menu 功能：轉灰階
+    grayscaleAction = new QAction(style()->standardIcon(QStyle::SP_MediaPlay), "Grayscale (灰階處理)", this);
+    grayscaleAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_G)); // Ctrl+G
+    grayscaleAction->setStatusTip("將原圖轉換為灰階影像 (Ctrl+G)");
+    grayscaleAction->setEnabled(false); // 尚未開圖前先停用
 
-    // 2. 掛載到上方選單列 (File Menu)
-    QMenu *fileMenu = menuBar()->addMenu("File (&F)");
-    fileMenu->addAction(openAction);
-    fileMenu->addAction(saveAction);
+    // 5. Edit Menu 功能：清除畫面
+    clearAction = new QAction(style()->standardIcon(QStyle::SP_DialogResetButton), "Clear (清除畫面)", this);
+    clearAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_Delete)); // Ctrl+Del
+    clearAction->setStatusTip("清除目前載入與處理的所有影像");
+    clearAction->setEnabled(false);
+
+    // 【需求：File / Image / Edit 的 Menu】
+    QMenu *fileMenu = menuBar()->addMenu("File");
+    fileMenu->addAction(openAction); // Open Image 出現在 File Menu
+    fileMenu->addAction(saveAction); // Save 出現在 File Menu (顯示 Ctrl+S)
     fileMenu->addSeparator();
-    fileMenu->addAction(exitAction);
+    fileMenu->addAction(exitAction); // Exit 出現在 File Menu
 
-    QMenu *processMenu = menuBar()->addMenu("Process (&P)");
-    processMenu->addAction(processAction);
+    QMenu *imageMenu = menuBar()->addMenu("Image");
+    imageMenu->addAction(grayscaleAction);
 
-    // 3. 掛載同一個 openAction 到工具列 (ToolBar)，達成 Menu 與 ToolBar 共用
-    QToolBar *mainToolBar = addToolBar("Main ToolBar");
+    QMenu *editMenu = menuBar()->addMenu("Edit");
+    editMenu->addAction(clearAction);
+
+    // 【需求：Toolbar 中包含常見 QAction】
+    QToolBar *mainToolBar = addToolBar("Main Toolbar");
     mainToolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    mainToolBar->addAction(openAction);
-    mainToolBar->addAction(processAction);
-    mainToolBar->addAction(saveAction);
+    mainToolBar->addAction(openAction);      // 追加項目：同一個 Open Image 出現在 Toolbar，執行相同功能
+    mainToolBar->addAction(saveAction);      // 常見動作：Save
+    mainToolBar->addSeparator();
+    mainToolBar->addAction(grayscaleAction); // 常見動作：Grayscale
+    mainToolBar->addAction(clearAction);     // 常見動作：Clear
+    mainToolBar->addSeparator();
+    mainToolBar->addAction(exitAction);      // 常見動作：Exit
 
-    // 4. 連接 Signal & Slot
+    // 連接 Signal & Slot
     connect(openAction, &QAction::triggered, this, &MainWindow::openImage);
-    connect(processAction, &QAction::triggered, this, &MainWindow::processGrayscale);
     connect(saveAction, &QAction::triggered, this, &MainWindow::saveImage);
     connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    connect(grayscaleAction, &QAction::triggered, this, &MainWindow::processGrayscale);
+    connect(clearAction, &QAction::triggered, this, &MainWindow::clearImages);
 }
 
 void MainWindow::openImage()
 {
     QString fileName = QFileDialog::getOpenFileName(
         this,
-        "選擇測試圖片",
+        "Open Image",
         "",
-        "影像檔案 (*.png *.jpg *.jpeg *.bmp);;所有檔案 (*.*)"
+        "Images (*.png *.jpg *.jpeg *.bmp);;All Files (*.*)"
         );
 
     if (fileName.isEmpty()) {
-        statusBar()->showMessage("已取消開啟檔案");
+        statusBar()->showMessage("已取消開啟圖片");
         return;
     }
 
     QImage loadedImage(fileName);
     if (loadedImage.isNull()) {
-        QMessageBox::warning(this, "錯誤", "無法載入該圖片檔案，請確認格式是否正確！");
+        QMessageBox::warning(this, "錯誤", "無法載入該影像檔案！");
         return;
     }
 
     originalImage = loadedImage;
     processedImage = QImage();
     processedLabel->clear();
-    processedLabel->setText("已載入原圖，請點擊「執行灰階處理」");
+    processedLabel->setText("已載入原圖，請執行 Image -> Grayscale");
 
     updateImageDisplay();
 
-    // 解鎖「執行處理」，「儲存」維持鎖定直到處理完成
-    processAction->setEnabled(true);
+    // 啟用影像處理與清除按鈕，儲存按鈕待處理後再啟用
+    grayscaleAction->setEnabled(true);
+    clearAction->setEnabled(true);
     saveAction->setEnabled(false);
 
-    statusBar()->showMessage(QString("成功載入圖片：%1 (%2x%3)")
+    statusBar()->showMessage(QString("已載入：%1 (%2x%3)")
                                  .arg(fileName)
                                  .arg(originalImage.width())
                                  .arg(originalImage.height()));
@@ -152,12 +171,11 @@ void MainWindow::processGrayscale()
     if (originalImage.isNull()) return;
 
     processedImage = originalImage.convertToFormat(QImage::Format_Grayscale8);
-
     updateImageDisplay();
 
-    // 處理完成，解鎖「儲存結果」(Menu、ToolBar 與 Ctrl+S 同步啟用)
+    // 處理完成，啟用 Save (同時解鎖 Menu、Toolbar 與 Ctrl+S)
     saveAction->setEnabled(true);
-    statusBar()->showMessage("影像處理完成：已轉換為灰階影像 (可按 Ctrl+S 儲存)");
+    statusBar()->showMessage("灰階處理完成！可按 Ctrl+S 儲存結果");
 }
 
 void MainWindow::saveImage()
@@ -166,9 +184,9 @@ void MainWindow::saveImage()
 
     QString savePath = QFileDialog::getSaveFileName(
         this,
-        "儲存處理後影像",
-        "output_processed.png",
-        "PNG 影像 (*.png);;JPEG 影像 (*.jpg);;BMP 影像 (*.bmp)"
+        "Save Image",
+        "processed_output.png",
+        "PNG (*.png);;JPEG (*.jpg);;BMP (*.bmp)"
         );
 
     if (savePath.isEmpty()) {
@@ -177,11 +195,28 @@ void MainWindow::saveImage()
     }
 
     if (processedImage.save(savePath)) {
-        QMessageBox::information(this, "成功", "影像已成功儲存至：\n" + savePath);
-        statusBar()->showMessage("檔案已儲存：" + savePath);
+        QMessageBox::information(this, "儲存成功", "影像已儲存至：\n" + savePath);
+        statusBar()->showMessage("已儲存：" + savePath);
     } else {
-        QMessageBox::critical(this, "儲存失敗", "無法寫入檔案，請檢查資料夾權限！");
+        QMessageBox::critical(this, "儲存失敗", "檔案寫入失敗！");
     }
+}
+
+void MainWindow::clearImages()
+{
+    originalImage = QImage();
+    processedImage = QImage();
+
+    originalLabel->clear();
+    originalLabel->setText("尚未載入圖片");
+    processedLabel->clear();
+    processedLabel->setText("等待執行影像處理");
+
+    grayscaleAction->setEnabled(false);
+    saveAction->setEnabled(false);
+    clearAction->setEnabled(false);
+
+    statusBar()->showMessage("已清除所有畫面");
 }
 
 void MainWindow::updateImageDisplay()
